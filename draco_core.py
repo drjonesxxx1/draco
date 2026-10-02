@@ -559,7 +559,8 @@ def create_invoice(user, plan):
     if not b.get("store_id"):
         return None, "Payments temporarily offline."
     try:
-        r = http.post(f"{b['url']}/api/v1/stores/{b['store_id']}/invoices",
+        api_host = b.get("api_url") or b["url"]          # LAN IP for API calls (CF 1010)
+        r = http.post(f"{api_host}/api/v1/stores/{b['store_id']}/invoices",
                       headers={"Authorization": f"token {b['api_key']}"},
                       json={"amount": str(p["usd"]), "currency": "USD",
                             "metadata": {"userId": user["id"], "credits": p["credits"],
@@ -568,6 +569,9 @@ def create_invoice(user, plan):
                       timeout=20, verify=False)
         r.raise_for_status()
         inv = r.json()
+        link = inv.get("checkoutLink") or (inv.get("checkout") or {}).get("link") or ""
+        if link and link.startswith(api_host):           # mirrors request Host -> rewrite
+            inv["checkoutLink"] = b["url"] + link[len(api_host):]
     except Exception as e:
         return None, f"Invoice error: {e}"
     c = db()
@@ -589,7 +593,7 @@ def handle_webhook(body, header_sig_ok):
     if not p:
         c.close()
         return True
-    if etype == "InvoiceSettled":
+    if etype == "InvoiceSettled" and p["status"] != "settled":  # idempotent: replays no-op
         c.execute("UPDATE payments SET status='settled', settled_at=CURRENT_TIMESTAMP WHERE invoice_id=?", (invoice_id,))
         if p["amount_usd"] >= 50:  # HOARD = $50/mo unlimited: 30 days from settle
             import datetime

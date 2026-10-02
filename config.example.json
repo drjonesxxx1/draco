@@ -27,6 +27,7 @@
   },
   "btcpay": {
     "url": "https://btcpay.thetempleofdoom.com",
+    "api_url": "https://10.30.20.140",
     "store_id": "SET_ME",
     "api_key": "SET_ME",
     "webhook_secret": "SET_ME"
