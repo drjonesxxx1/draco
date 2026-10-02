@@ -491,7 +491,9 @@ def signup(email):
 # ---------------------------------------------------------------- llms.txt content
 def load_llms_txt():
     s = get_stats()
-    plans = ", ".join(f"{name}: ${p['usd']} = {p['credits']} credits" for name, p in CFG["plans"].items())
+    plans = ", ".join(
+        f"{name}: ${p['usd']}" + (" = UNLIMITED 30 days" if p["usd"] >= 50 else f" = {p['credits']} credits")
+        for name, p in CFG["plans"].items())
     return f"""# DRACO — The Book-Forged Code Oracle
 
 > DRACO answers coding, Linux, systems, and security questions with answers grounded
