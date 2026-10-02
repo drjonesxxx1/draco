@@ -33,6 +33,8 @@ padding:3px 14px;font-size:12px;letter-spacing:2px;text-transform:uppercase;marg
 .msg.assistant{color:var(--txt)}
 .msg .who{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:3px}
 .srcs{font-size:12px;color:var(--dim);border-left:2px solid var(--gold);padding-left:10px;margin-top:8px}
+.thinking{color:var(--dim);font-style:italic;font-size:13px;border-left:2px solid var(--line);padding-left:10px;margin-bottom:8px;white-space:pre-wrap}
+.thinking .who{font-size:10px;color:var(--dim);opacity:.7}
 .cursor{display:inline-block;width:8px;height:15px;background:var(--gold);animation:blink 1s steps(1) infinite;vertical-align:text-bottom}
 @keyframes blink{50%{opacity:0}}
 .chatrow{display:flex;gap:10px;margin-top:12px}
@@ -141,7 +143,9 @@ async function ask(text){
  try{
   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({q:text})});
-  const reader=r.body.getReader(),dec=new TextDecoder();let buf='',acc='';
+  if(!r.ok){const t=await r.text();let m='HTTP '+r.status;try{m=JSON.parse(t).error||m}catch(e){}
+   body.textContent='⚠ '+m;busy=false;go.disabled=false;return;}
+  const reader=r.body.getReader(),dec=new TextDecoder();let buf='',acc='',thinkEl=null;
   while(true){const{value,done}=await reader.read();if(done)break;
    buf+=dec.decode(value,{stream:true});const lines=buf.split('\\n');buf=lines.pop()||'';
    for(const line of lines){if(!line.startsWith('data: '))continue;
@@ -149,6 +153,12 @@ async function ask(text){
     if(ev.type==='sources'&&ev.sources.length){
      srcs.style.display='block';
      srcs.textContent='📚 '+ev.sources.map(s=>'['+(s.n)+'] '+s.title).join(' · ');
+    }else if(ev.type==='token'&&ev.channel==='think'){
+     if(!thinkEl){thinkEl=document.createElement('div');thinkEl.className='thinking';
+      thinkEl.innerHTML="<span class='who'>◈ thinking </span><span class='tbody'></span>";
+      body.parentNode.insertBefore(thinkEl,body);}
+     thinkEl.querySelector('.tbody').textContent+=ev.text;
+     log.scrollTop=log.scrollHeight;
     }else if(ev.type==='token'){acc+=ev.text;body.innerHTML='';
      body.appendChild(document.createTextNode(acc));body.appendChild(document.createElement('span')).className='cursor';
      log.scrollTop=log.scrollHeight;

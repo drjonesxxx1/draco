@@ -104,9 +104,17 @@ def chat():
 
     def generate():
         yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
+        acc = ""
         try:
-            for piece in core.stream_ollama(prompt):
-                yield f"data: {json.dumps({'type': 'token', 'text': piece})}\n\n"
+            for channel, piece in core.stream_ollama(prompt):
+                if channel == "answer":
+                    acc += piece
+                    if core.degenerate(acc):
+                        core.unload_model()  # auto-recovery: next request reloads clean
+                        yield f"data: {json.dumps({'type': 'error', 'text': 'model hiccup — auto-recovered, ask again'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                        return
+                yield f"data: {json.dumps({'type': 'token', 'channel': channel, 'text': piece})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'text': f'Model offline: {e}'})}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
@@ -289,50 +297,23 @@ def sitemap():
     return Response(body, mimetype="application/xml")
 
 # ------------------------------------------------------------------ MCP (streamable-http)
-try:
-    from mcp.server.fastmcp import FastMCP
-    mcp = FastMCP("draco", host="127.0.0.1", port=CFG.get("mcp_port", 8012),
-                  streamable_http_path="/mcp")
-
-    @mcp.tool()
-    def draco_ask(question: str) -> str:
-        """Ask DRACO a coding or security question. Answers are grounded in hundreds of
-        real programming and hacking books, with [n] citations and source titles."""
-        prompt, hits = core.build_prompt(question, k=CFG.get("rag_k", 6))
-        try:
-            answer = core.ask_ollama(prompt)
-        except Exception as e:
-            return f"Model offline: {e}"
-        src = "\n".join(f"[{i+1}] {h['title']} ({h['category']})" for i, h in enumerate(hits))
-        return f"{answer}\n\nSOURCES:\n{src}"
-
-    @mcp.tool()
-    def draco_search(query: str, k: int = 8) -> str:
-        """Search DRACO's book library (BM25) for passages matching a topic."""
-        hits = core.search_library(query, k=k)
-        if not hits:
-            return "No passages matched."
-        return "\n\n".join(f"[{h['title']} · {h['category']} · score {h['score']}]\n{h['text'][:600]}" for h in hits)
-
-    @mcp.tool()
-    def draco_status() -> str:
-        """DRACO health + library size."""
-        s = core.get_stats()
-        return (f"DRACO {CFG['model']} · {s['books']} books · {s['chunks']} passages · "
-                f"API: {CFG['base_url']}/api · MCP: {CFG['base_url']}/mcp")
-
-    from starlette.applications import Starlette
-    starlette_app = mcp.streamable_http_app()
-    app.mount("/mcp", starlette_app)
-    MCP_OK = True
-except Exception as _e:  # MCP optional at runtime
-    MCP_OK = False
-    MCP_ERR = str(_e)
-
+# MCP lives in its own ASGI process (mcp_server.py, uvicorn :8013); nginx routes /mcp there.
+# Status reflects the MCP service health.
 @app.route("/mcp-info")
 def mcp_info():
-    return jsonify(mcp=MCP_OK, error=MCP_ERR if not MCP_OK else None,
-                   url=f"{CFG['base_url']}/mcp")
+    mcp_ok = False
+    try:
+        r = http.post("http://127.0.0.1:8013/mcp", timeout=6,
+                      headers={"Content-Type": "application/json",
+                               "Accept": "application/json, text/event-stream"},
+                      json={"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                            "params": {"protocolVersion": "2025-03-26", "capabilities": {},
+                                       "clientInfo": {"name": "mcp-info-probe", "version": "1"}}})
+        mcp_ok = r.status_code == 200
+        err = None if mcp_ok else f"mcp service http {r.status_code}"
+    except Exception as e:
+        err = str(e)
+    return jsonify(mcp=mcp_ok, error=err, url=f"{CFG['base_url']}/mcp")
 
 # ------------------------------------------------------------------ static
 @app.route("/static/logo.svg")
@@ -347,5 +328,4 @@ def logo():
 
 # ------------------------------------------------------------------ main
 if __name__ == "__main__":
-    print(f"DRACO starting · MCP={'ok' if MCP_OK else 'FAILED: ' + MCP_ERR}")
     app.run(host="127.0.0.1", port=CFG["port"], threaded=True)

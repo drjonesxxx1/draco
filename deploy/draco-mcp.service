@@ -1,0 +1,15 @@
+[Unit]
+Description=DRACO MCP server (streamable-http)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/draco
+ExecStart=/opt/draco/venv/bin/python3 -m uvicorn mcp_server:app --host 127.0.0.1 --port 8013 --log-level warning
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=DRACO_MCP_PORT=8013
+
+[Install]
+WantedBy=multi-user.target
