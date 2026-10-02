@@ -434,6 +434,7 @@ def consume(user, kind, detail="", ip=""):
             c.close()
             return False, "Out of credits. Free tier: %d/mo. Buy more at %s/pricing" % (
                 CFG["free_monthly"], CFG["base_url"])
+        c.execute("UPDATE users SET total_calls=total_calls+1 WHERE id=?", (user["id"],))
         c.execute("INSERT INTO usage_log (user_id, api_key, ip, kind, detail) VALUES (?,?,?,?,?)",
                   (user["id"], user["api_key"], ip, kind, detail[:200]))
     else:
