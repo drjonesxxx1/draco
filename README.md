@@ -7,6 +7,7 @@
 > from Claude, GPT, or any agent.
 
 - **Live:** https://draco.thetempleofdoom.com
+- **GitHub:** https://github.com/drjonesxxx1/draco
 - **Repo:** http://10.30.20.149:3000/drjones/draco
 - **Host:** Proxmox CT 174 `draco` @ `10.30.20.12` (Debian 13, 4GB RAM / 4 cores)
 - **LLM:** `ornith-1.5:9b-64k` on bare-metal Ollama @ `10.30.20.29` (nightmare, 4090S) — abliterated/heretic lineage, zero-spill resident
@@ -117,7 +118,7 @@ curl -s -X POST https://draco.thetempleofdoom.com/api/create-invoice \
 Tools: `draco_ask(question)` → cited answer · `draco_search(query, k)` → raw passages ·
 `draco_status()` → health + library stats.
 
-**Published:** official MCP registry — `com.thetempleofdoom.draco/draco` (active):
+**Published:** official MCP registry — `com.thetempleofdoom.draco/draco` **v1.1.0** (active, with repo metadata):
 https://registry.modelcontextprotocol.io/servers/com.thetempleofdoom.draco/draco
 Domain proof: TXT `v=MCPv1` on draco.thetempleofdoom.com (shared fleet ed25519 identity).
 
