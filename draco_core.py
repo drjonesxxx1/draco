@@ -179,16 +179,22 @@ class CoTFilter:
                 self.in_think = False
                 self.buf = self.buf[i + len(self.CLOSE):]
             else:
-                i = self.buf.find(self.OPEN)
-                if i == -1:
-                    keep = min(len(self.buf), len(self.OPEN) - 1)
+                i_open = self.buf.find(self.OPEN)
+                i_close = self.buf.find(self.CLOSE)
+                # close-tag with no open-tag seen: drop the CoT preamble wholesale
+                if i_close != -1 and (i_open == -1 or i_close < i_open):
+                    self.buf = self.buf[i_close + len(self.CLOSE):]
+                    self.in_think = False
+                    continue
+                if i_open == -1:
+                    keep = min(len(self.buf), max(len(self.OPEN), len(self.CLOSE)) - 1)
                     cut = len(self.buf) - keep
                     out += self.buf[:cut]
                     self.buf = self.buf[cut:]
                     return out
-                out += self.buf[:i]
+                out += self.buf[:i_open]
                 self.in_think = True
-                self.buf = self.buf[i + len(self.OPEN):]
+                self.buf = self.buf[i_open + len(self.OPEN):]
 
     def flush(self):
         out, self.buf = ("" if self.in_think else self.buf), ""
