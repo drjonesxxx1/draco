@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     credits INTEGER DEFAULT 0,
     free_used INTEGER DEFAULT 0,
     total_calls INTEGER DEFAULT 0,
+    unlimited_until VARCHAR(32),
     is_admin INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used_at TIMESTAMP
@@ -59,10 +60,16 @@ def db():
 def init_db():
     c = db()
     c.executescript(SCHEMA)
-    try:  # in-place migration for DBs created before total_calls existed
-        c.execute("SELECT total_calls FROM users LIMIT 1")
-    except sqlite3.OperationalError:
-        c.execute("ALTER TABLE users ADD COLUMN total_calls INTEGER DEFAULT 0")
+    for col, decl in (("total_calls", "INTEGER DEFAULT 0"),       # idempotent migrations:
+                      ("unlimited_until", "VARCHAR(32)")):          # gunicorn workers race at boot
+        try:
+            c.execute(f"SELECT {col} FROM users LIMIT 1")
+        except sqlite3.OperationalError:
+            try:
+                c.execute(f"ALTER TABLE users ADD COLUMN {col} {decl}")
+            except sqlite3.OperationalError as e:  # another worker won the race
+                if "duplicate column" not in str(e).lower():
+                    raise
         c.commit()
     c.execute("INSERT OR IGNORE INTO users (email, api_key, credits, is_admin) VALUES (?,?,?,1)",
               ("admin@draco.local", CFG["admin_key"], 999999))
@@ -417,7 +424,9 @@ def consume(user, kind, detail="", ip=""):
         cur = c.execute("SELECT credits, free_used FROM users WHERE id=?", (user["id"],)).fetchone()
         row = c.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
         month = time.strftime("%Y-%m")
-        if row["free_used"] < CFG["free_monthly"]:
+        if row["unlimited_until"] and row["unlimited_until"] > time.strftime("%Y-%m-%d"):
+            pass  # HOARD subscriber: unlimited, no decrement
+        elif row["free_used"] < CFG["free_monthly"]:
             c.execute("UPDATE users SET free_used=free_used+1, last_used_at=CURRENT_TIMESTAMP WHERE id=?", (user["id"],))
         elif row["credits"] > 0:
             c.execute("UPDATE users SET credits=credits-1, last_used_at=CURRENT_TIMESTAMP WHERE id=?", (user["id"],))
@@ -580,7 +589,12 @@ def handle_webhook(body, header_sig_ok):
         return True
     if etype == "InvoiceSettled":
         c.execute("UPDATE payments SET status='settled', settled_at=CURRENT_TIMESTAMP WHERE invoice_id=?", (invoice_id,))
-        c.execute("UPDATE users SET credits=credits+? WHERE id=?", (p["credits"], p["user_id"]))
+        if p["amount_usd"] >= 50:  # HOARD = $50/mo unlimited: 30 days from settle
+            import datetime
+            until = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+            c.execute("UPDATE users SET unlimited_until=? WHERE id=?", (until, p["user_id"]))
+        else:
+            c.execute("UPDATE users SET credits=credits+? WHERE id=?", (p["credits"], p["user_id"]))
     else:
         c.execute("UPDATE payments SET status='processing' WHERE invoice_id=?", (invoice_id,))
     c.commit()

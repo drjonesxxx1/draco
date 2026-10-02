@@ -53,11 +53,17 @@ self-hosted BTCPay — no card processor ever sees you or us.</p>
  <div class='stat' style='min-width:280px'><b style='color:var(--green)'>FREE</b><span>{{ free_monthly }} API credits / month + {{ free_day }} web questions / day</span></div>
  <div class='stat' style='min-width:280px'><b>1 credit</b><span>= 1 ask (RAG + citations) or 1 search</span></div>
 </div>
-<h2>◈ Credit packs — one-time, never expire</h2>
+<h2>◈ Pricing — the honest kind</h2>
+<p class='dim'><b class='gold'>$50/mo HOARD</b> = unlimited: every ask, every search, the whole
+{{ mb }}M-char library, as hard as you want to run it. Or pay-per-use with packs. Bitcoin only,
+no subscription trap — HOARD simply expires in 30 days unless you renew.</p>
 <table>
-<tr><th>Pack</th><th>Price</th><th>Credits</th><th>$/credit</th><th></th></tr>
+<tr><th>Tier</th><th>Price</th><th>What you get</th><th></th></tr>
 {% for name, p in plans.items() %}
-<tr><td><b>{{ name }}</b></td><td>${{ '%.2f'|format(p.usd) }}</td><td>{{ p.credits }}</td><td>${{ '%.3f'|format(p.usd / p.credits) }}</td>
+<tr{% if p.usd >= 50 %} style='border:1px solid var(--gold)'{% endif %}>
+<td><b class='gold'>{{ name }}</b>{% if p.usd >= 50 %} <span class='badge' style='font-size:10px;padding:1px 8px;margin-left:6px'>BEST</span>{% endif %}</td>
+<td>${{ '%.0f'|format(p.usd) }}{% if p.usd >= 50 %}/mo{% endif %}</td>
+<td>{% if p.usd >= 50 %}UNLIMITED asks + searches for 30 days. The whole library, unmetered.{% else %}{{ p.credits }} credits (1 = 1 ask or search), never expire.{% endif %}</td>
 <td><button onclick='buy("{{ name }}")'>BUY ⟶</button></td></tr>
 {% endfor %}
 </table>

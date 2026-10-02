@@ -75,16 +75,18 @@ NAV = """<a class='logo' href='/'>DRACO<small>book-forged oracle</small></a>
 
 PAGE_HOME = """
 <div class='hero'>
- <span class='badge'>◈ Grounded in real books — not vibes</span>
- <h1>The smartest coding AI you can <span class='gold'>prove.</span></h1>
- <p class='dim'>Most AI assistants guess. DRACO retrieves from <b>__STATS__</b> —
- languages, kernels, networks, exploitation, red-team tradecraft — and shows you the exact
- books behind every answer. Check the citations. That's the proof.</p>
+ <span class='badge'>◈ THE LARGEST PROVABLE BOOK-GROUNDED AI ON THE INTERNET</span>
+ <h1>Other AIs guess.<br>DRACO <span class='gold'>knows</span> — and proves it.</h1>
+ <p class='dim'>Generic chatbots hallucinate from compressed training data. DRACO retrieves
+ live from <b>__STATS__</b> of actual expert books — languages, kernels, networks,
+ exploitation, red-team tradecraft — and stamps the exact source on every claim.
+ <b class='gold'>No cutoff. No hallucination. Receipts attached.</b></p>
  <div class='stats'>
   <div class='stat'><b>{{ books }}</b><span>real books indexed</span></div>
   <div class='stat'><b>{{ chunks }}</b><span>retrievable passages</span></div>
   <div class='stat'><b>{{ mb }}M</b><span>chars of expert text</span></div>
-  <div class='stat'><b>&lt;2s</b><span>retrieval + answer start</span></div>
+    <div class='stat'><b>&lt;2s</b><span>retrieval + answer start</span></div>
+  <div class='stat'><b>100%</b><span>cited or flagged — never silent</span></div>
  </div>
 </div>
 
@@ -111,10 +113,10 @@ PAGE_HOME = """
  </div>
 </div>
 
-<h2>◈ Why "book-forged" is different</h2>
+<h2>◈ Why DRACO embarrasses generic chatbots</h2>
 <div class='grid'>
- <div class='card'><b>Every claim has a receipt</b><span>answers cite [n] — click through to the source book in /library</span></div>
- <div class='card'><b>No 2021 knowledge cutoff</b><span>fundamentals from the canon: K&R, Tanenbaum, the shellcoders' handbook</span></div>
+ <div class='card'><b>Every claim has a receipt</b><span>answers cite [n] with the source book attached — verify in one click, unlike any chatbot's 'trust me'</span></div>
+ <div class='card'><b>Knowledge cutoff: NEVER</b><span>the canon is resident — K&amp;R, Tanenbaum, the shellcoders' handbook — not compressed away in training</span></div>
  <div class='card'><b>Agentic by design</b><span>MCP server + REST API — summon DRACO from Claude, GPT, or any agent</span></div>
  <div class='card'><b>Self-hosted, no telemetry</b><span>runs on bare metal; questions never leave the house</span></div>
 </div>

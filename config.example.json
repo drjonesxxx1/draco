@@ -11,9 +11,19 @@
   "free_monthly": 30,
   "admin_key": "sk-draco-admin-CHANGE_ME",
   "plans": {
-    "satchel": {"usd": 3, "credits": 60},
-    "crate": {"usd": 10, "credits": 250},
-    "hoard": {"usd": 25, "credits": 750}
+    "satchel": {
+      "usd": 3,
+      "credits": 60
+    },
+    "crate": {
+      "usd": 10,
+      "credits": 250
+    },
+    "hoard": {
+      "usd": 50,
+      "credits": 1000000,
+      "label": "UNLIMITED 30 DAYS"
+    }
   },
   "btcpay": {
     "url": "https://btcpay.thetempleofdoom.com",
