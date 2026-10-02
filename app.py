@@ -261,7 +261,7 @@ def ai_plugin():
 def mcp_manifest():
     return Response(json.dumps({
         "$schema": "https://cdn.jsdelivr.net/npm/@modelcontextprotocol/sdk@latest/schema.json",
-        "name": "com.thetempleofdoom.draco/ask",
+        "name": "com.thetempleofdoom.draco/draco",
         "description": "Coding & security oracle grounded in hundreds of real books. Ask, search, cite.",
         "homepage": CFG["base_url"],
         "remotes": [{"type": "streamable-http", "url": f"{CFG['base_url']}/mcp"}]
