@@ -1,0 +1,9 @@
+[Unit]
+Description=DRACO keep model warm every 4 minutes
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=240
+
+[Install]
+WantedBy=timers.target

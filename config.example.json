@@ -1,8 +1,9 @@
 {
-  "model": "ornith-1.5:9b-64k",
+  "model": "vornith:latest",
   "ollama_url": "http://10.30.20.29:11434",
   "num_ctx": 8192,
-  "rag_k": 6,
+  "rag_k": 2,
+  "num_predict": 1100,
   "port": 8012,
   "mcp_port": 8012,
   "base_url": "https://draco.thetempleofdoom.com",

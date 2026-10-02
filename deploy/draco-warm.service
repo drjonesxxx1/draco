@@ -1,0 +1,6 @@
+[Unit]
+Description=DRACO model keep-warm ping
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s -m 130 http://127.0.0.1:8012/api/warm

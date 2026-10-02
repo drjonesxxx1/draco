@@ -68,10 +68,12 @@ def api_page():
 
 @app.route("/health")
 def health():
+    # No generation probe here: a tiny probe prompt on the shared resident instance
+    # is the vornith corruption trigger. Model presence via /api/tags (no GPU work).
     try:
-        r = http.post(f"{CFG['ollama_url']}/api/generate", stream=True, timeout=4,
-                      json={"model": CFG["model"], "prompt": "ping", "stream": True, "options": {"num_predict": 1}})
-        llm = r.status_code == 200
+        r = http.get(f"{CFG['ollama_url']}/api/tags", timeout=4)
+        models = [m.get("name") for m in r.json().get("models", [])]
+        llm = CFG["model"] in models
     except Exception:
         llm = False
     return jsonify(status="ok", llm=llm, model=CFG["model"], **core.get_stats())
@@ -121,6 +123,14 @@ def chat():
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.route("/api/warm")
+def api_warm():
+    """Heartbeat target for the systemd timer; also a manual health-probe for the model lane."""
+    healthy, sample = core.warm_model()
+    if not healthy and "CUDA" not in sample:
+        core.unload_model()  # corrupt instance: drop it; next warm reloads clean
+    return jsonify(healthy=healthy, sample=sample, model=CFG["model"])
 
 @app.route("/api/remaining")
 def remaining():

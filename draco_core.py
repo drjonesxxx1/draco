@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     api_key VARCHAR(64) UNIQUE NOT NULL,
     credits INTEGER DEFAULT 0,
     free_used INTEGER DEFAULT 0,
+    total_calls INTEGER DEFAULT 0,
     is_admin INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used_at TIMESTAMP
@@ -58,6 +59,11 @@ def db():
 def init_db():
     c = db()
     c.executescript(SCHEMA)
+    try:  # in-place migration for DBs created before total_calls existed
+        c.execute("SELECT total_calls FROM users LIMIT 1")
+    except sqlite3.OperationalError:
+        c.execute("ALTER TABLE users ADD COLUMN total_calls INTEGER DEFAULT 0")
+        c.commit()
     c.execute("INSERT OR IGNORE INTO users (email, api_key, credits, is_admin) VALUES (?,?,?,1)",
               ("admin@draco.local", CFG["admin_key"], 999999))
     c.commit()
@@ -127,12 +133,17 @@ SYSTEM = (
     "Answer directly with no reasoning preamble and no meta commentary."
 )
 
-def build_prompt(question, k=6):
+def build_prompt(question, k=None):
+    """RAG prompt. PROMPT BUDGET RULE: all prompts must land in the same size class
+    (~600 tok). vornith (linear-attn+MTP hybrid) corrupts when one resident instance
+    receives mixed tiny/long prompts; uniform bounded prompts are proven stable."""
+    k = k or CFG.get("rag_k", 2)
+    k = min(k, 3)  # hard cap: 3 x 1200-char excerpts ~= clean-zone prompt
     hits = search_library(question, k=k)
     if hits:
         blocks = []
         for n, h in enumerate(hits, 1):
-            blocks.append(f"[{n}] {h['title']} ({h['category']})\n{h['text'][:1400]}")
+            blocks.append(f"[{n}] {h['title']} ({h['category']})\n{h['text'][:1200]}")
         ctx = "\n\n".join(blocks)
         prompt = f"{SYSTEM}\n\nBOOK EXCERPTS:\n{ctx}\n\nQUESTION: {question}\n\nANSWER (cite [n]):"
     else:
@@ -314,6 +325,9 @@ def stream_ollama(prompt):
     """Yield (channel, piece) tuples: channel 'think' or 'answer'."""
     r = http.post(f"{CFG['ollama_url']}/api/generate",
                   json={"model": CFG["model"], "prompt": prompt, "stream": True,
+                        # RESIDENT model: cold-load prefill >1k tokens CUDA-crashes on this
+                        # hybrid arch. Corruption (????? output) is handled by detection +
+                        # auto-reload in the app layer instead.
                         "options": {"temperature": 0.4, "num_predict": CFG.get("num_predict", 1100),
                                     "num_ctx": CFG.get("num_ctx", 8192)}},
                   timeout=(5, None), stream=True)
@@ -328,23 +342,54 @@ def stream_ollama(prompt):
         yield channel, piece
 
 def ask_ollama(prompt):
-    """Non-streaming RAG answer (reasoning stripped, tagged or not)."""
-    r = http.post(f"{CFG['ollama_url']}/api/generate",
-                  json={"model": CFG["model"], "prompt": prompt, "stream": False,
-                        "options": {"temperature": 0.4, "num_predict": CFG.get("num_predict", 1100),
-                                    "num_ctx": CFG.get("num_ctx", 8192)}},
-                  timeout=180)
-    r.raise_for_status()
-    _, answer = strip_cot(r.json().get("response", ""))
-    if degenerate(answer):
-        unload_model()
-        raise RuntimeError("model returned degenerate output — model unloaded, retry")
-    return answer
+    """Non-streaming RAG answer with auto-recovery: on degenerate/CUDA failure,
+    unload the model, reload fresh, retry once before surfacing an error."""
+    last_err = None
+    for attempt in (1, 2):
+        try:
+            r = http.post(f"{CFG['ollama_url']}/api/generate",
+                          json={"model": CFG["model"], "prompt": prompt, "stream": False,
+                                "options": {"temperature": 0.4, "num_predict": CFG.get("num_predict", 1100),
+                                            "num_ctx": CFG.get("num_ctx", 8192)}},
+                          timeout=180)
+            r.raise_for_status()
+            raw = r.json().get("response", "")
+            if raw and degenerate(raw):
+                last_err = RuntimeError("degenerate output")
+            else:
+                _, answer = strip_cot(raw)
+                return answer
+        except http.HTTPError as e:
+            last_err = e
+        except Exception as e:
+            last_err = e
+        unload_model()  # force clean reload for the next attempt
+        time.sleep(2)
+    raise RuntimeError(f"model unstable after retry: {last_err}")
 
 def degenerate(s):
     """vornith VRAM/session corruption signature: run of '?' chars."""
     s = s.strip()
     return len(s) >= 40 and s.count("?") / len(s) > 0.4
+
+def warm_model():
+    """Budget-sized heartbeat: keeps the model resident AND exercised at the canonical
+    prompt size. Tiny prompts (<50 tok) on the shared instance are the corruption
+    trigger, so the ping itself must be RAG-sized."""
+    try:
+        excerpt = ("The utility of a uniform prompt budget is that the model never "
+                   "encounters a context-length distribution shift between requests. " * 9)
+        prompt = (f"{SYSTEM}\n\nBOOK EXCERPTS:\n[1] Warmup Excerpt (maintenance)\n{excerpt}"
+                  "\n\nQUESTION: Reply with exactly: ok\n\nANSWER (cite [n]):")
+        r = http.post(f"{CFG['ollama_url']}/api/generate",
+                      json={"model": CFG["model"], "prompt": prompt,
+                            "stream": False, "options": {"num_predict": 4}},
+                      timeout=120)
+        sample = r.json().get("response", "") if r.status_code == 200 else ""
+        healthy = r.status_code == 200 and not degenerate(sample)
+        return healthy, sample[:120]
+    except Exception as e:
+        return False, str(e)[:120]
 
 def unload_model():
     """Drop the model from VRAM so the next request reloads clean."""

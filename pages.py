@@ -140,33 +140,40 @@ async function ask(text){
  add('you','user').textContent=text;
  const body=add('draco','assistant');body.innerHTML='<span class=cursor></span>';
  const srcs=document.createElement('div');srcs.className='srcs';srcs.style.display='none';
- try{
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({q:text})});
-  if(!r.ok){const t=await r.text();let m='HTTP '+r.status;try{m=JSON.parse(t).error||m}catch(e){}
-   body.textContent='⚠ '+m;busy=false;go.disabled=false;return;}
-  const reader=r.body.getReader(),dec=new TextDecoder();let buf='',acc='',thinkEl=null;
-  while(true){const{value,done}=await reader.read();if(done)break;
-   buf+=dec.decode(value,{stream:true});const lines=buf.split('\\n');buf=lines.pop()||'';
-   for(const line of lines){if(!line.startsWith('data: '))continue;
-    const ev=JSON.parse(line.slice(6));
-    if(ev.type==='sources'&&ev.sources.length){
-     srcs.style.display='block';
-     srcs.textContent='📚 '+ev.sources.map(s=>'['+(s.n)+'] '+s.title).join(' · ');
-    }else if(ev.type==='token'&&ev.channel==='think'){
-     if(!thinkEl){thinkEl=document.createElement('div');thinkEl.className='thinking';
-      thinkEl.innerHTML="<span class='who'>◈ thinking </span><span class='tbody'></span>";
-      body.parentNode.insertBefore(thinkEl,body);}
-     thinkEl.querySelector('.tbody').textContent+=ev.text;
-     log.scrollTop=log.scrollHeight;
-    }else if(ev.type==='token'){acc+=ev.text;body.innerHTML='';
-     body.appendChild(document.createTextNode(acc));body.appendChild(document.createElement('span')).className='cursor';
-     log.scrollTop=log.scrollHeight;
-    }else if(ev.type==='error'){acc+='\n⚠ '+ev.text;}
-   }}
- }catch(e){acc+='\n⚠ connection lost';}
- body.innerHTML='';body.appendChild(document.createTextNode(acc||'(no output)'));
+ for(let attempt=1;attempt<=3;attempt++){
+  let hadTokens=false,hadError=null,acc='';
+  try{
+   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({q:text})});
+   if(!r.ok){const t=await r.text();let m='HTTP '+r.status;try{m=JSON.parse(t).error||m}catch(e){}
+    body.textContent='⚠ '+m;busy=false;go.disabled=false;return;}
+   const reader=r.body.getReader(),dec=new TextDecoder();let buf='',thinkEl=null;
+   while(true){const{value,done}=await reader.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});const lines=buf.split('\\n');buf=lines.pop()||'';
+    for(const line of lines){if(!line.startsWith('data: '))continue;
+     const ev=JSON.parse(line.slice(6));
+     if(ev.type==='sources'&&ev.sources.length){
+      srcs.style.display='block';
+      srcs.textContent='📚 '+ev.sources.map(s=>'['+(s.n)+'] '+s.title).join(' · ');
+     }else if(ev.type==='token'&&ev.channel==='think'){
+      if(!thinkEl){thinkEl=document.createElement('div');thinkEl.className='thinking';
+       thinkEl.innerHTML="<span class='who'>◈ thinking </span><span class='tbody'></span>";
+       body.parentNode.insertBefore(thinkEl,body);}
+      thinkEl.querySelector('.tbody').textContent+=ev.text;
+      log.scrollTop=log.scrollHeight;
+     }else if(ev.type==='token'){acc+=ev.text;hadTokens=true;body.innerHTML='';
+      body.appendChild(document.createTextNode(acc));body.appendChild(document.createElement('span')).className='cursor';
+      log.scrollTop=log.scrollHeight;
+     }else if(ev.type==='error'){hadError=ev.text;}
+    }}
+  }catch(e){hadError='connection lost';}
+  if(hadTokens&&!hadError){break;}
+  if(attempt<3){body.innerHTML='<span class=cursor></span>';await new Promise(r=>setTimeout(r,1500));}
+  else if(hadError){body.textContent='⚠ '+hadError;}
+  else break;
+ }
  const cur=body.querySelector('.cursor');if(cur)cur.remove();
+ if(!body.textContent.trim())body.textContent='(no output)';
  body.appendChild(srcs);
  const left=document.getElementById('left');
  fetch('/api/remaining').then(r=>r.json()).then(d=>left.textContent=d.remaining+' free questions left today').catch(()=>{});
