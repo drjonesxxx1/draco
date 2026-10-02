@@ -2,14 +2,14 @@
 """DRACO theme part 1: base CSS, nav, homepage (hero + chat)."""
 
 BASE_CSS = """
-:root{--bg:#07090e;--panel:#0c1017;--panel2:#111725;--line:#1c2436;--txt:#dbe4f0;
---dim:#7d8aa0;--gold:#e8b64c;--gold2:#f5d78a;--green:#3ddc84;--red:#ff5c5c;--mono:ui-monospace,'JetBrains Mono','Fira Code',Menlo,monospace}
+:root{--bg:#000000;--panel:#0a0b10;--panel2:#0f1117;--line:#191c26;--txt:#d9dee8;
+--dim:#78808f;--gold:#e8b64c;--gold2:#f5d78a;--green:#3ddc84;--red:#ff5c5c;--mono:ui-monospace,'JetBrains Mono','Fira Code',Menlo,monospace}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:15px;line-height:1.6;
-background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(232,180,76,.07),transparent)}
+background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(232,180,76,.05),transparent)}
 a{color:var(--gold);text-decoration:none}a:hover{color:var(--gold2)}
 nav{display:flex;gap:26px;align-items:center;padding:16px 5vw;border-bottom:1px solid var(--line);
-position:sticky;top:0;background:rgba(7,9,14,.92);backdrop-filter:blur(8px);z-index:50}
+position:sticky;top:0;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);z-index:50}
 nav .logo{font-weight:700;font-size:17px;color:var(--gold);letter-spacing:2px}
 nav .logo small{color:var(--dim);font-weight:400;letter-spacing:0;margin-left:8px}
 nav a{color:var(--dim);font-size:13px;text-transform:uppercase;letter-spacing:1px}
