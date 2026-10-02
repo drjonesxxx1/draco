@@ -502,6 +502,7 @@ def load_llms_txt():
 
 ## MCP (streamable-http)
 - {CFG['base_url']}/mcp — tools: draco_ask(question), draco_search(query,k), draco_status()
+- Official registry listing: https://registry.modelcontextprotocol.io/servers/com.thetempleofdoom.draco/draco
 
 ## Web UI
 - {CFG['base_url']}/ — homepage + live chat (no key needed, {CFG['anon_daily']}/day per IP)

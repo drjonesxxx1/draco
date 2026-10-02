@@ -117,6 +117,10 @@ curl -s -X POST https://draco.thetempleofdoom.com/api/create-invoice \
 Tools: `draco_ask(question)` → cited answer · `draco_search(query, k)` → raw passages ·
 `draco_status()` → health + library stats.
 
+**Published:** official MCP registry — `com.thetempleofdoom.draco/draco` (active):
+https://registry.modelcontextprotocol.io/servers/com.thetempleofdoom.draco/draco
+Domain proof: TXT `v=MCPv1` on draco.thetempleofdoom.com (shared fleet ed25519 identity).
+
 Streamable-http at `/mcp`. Smoke test by hand:
 
 ```bash
