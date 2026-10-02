@@ -1,0 +1,23 @@
+{
+  "model": "ornith-1.5:9b-64k",
+  "ollama_url": "http://10.30.20.29:11434",
+  "num_ctx": 8192,
+  "rag_k": 6,
+  "port": 8012,
+  "mcp_port": 8012,
+  "base_url": "https://draco.thetempleofdoom.com",
+  "anon_daily": 10,
+  "free_monthly": 30,
+  "admin_key": "sk-draco-admin-CHANGE_ME",
+  "plans": {
+    "satchel": {"usd": 3, "credits": 60},
+    "crate": {"usd": 10, "credits": 250},
+    "hoard": {"usd": 25, "credits": 750}
+  },
+  "btcpay": {
+    "url": "https://btcpay.thetempleofdoom.com",
+    "store_id": "SET_ME",
+    "api_key": "SET_ME",
+    "webhook_secret": "SET_ME"
+  }
+}

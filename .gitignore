@@ -1,0 +1,9 @@
+config.json
+draco.db
+*.pyc
+__pycache__/
+venv/
+*.tar.gz
+index/
+text/
+*.pkl

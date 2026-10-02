@@ -1,0 +1,8 @@
+flask
+requests
+rank_bm25
+nltk
+mcp
+uvicorn
+starlette
+gunicorn
